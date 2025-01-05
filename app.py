@@ -10,7 +10,6 @@ from collections import defaultdict
 
 load_dotenv()
 
-
 # Store completed sessions
 completed_sessions = set()
 pending_sessions = defaultdict(dict)
@@ -21,11 +20,13 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-ENCRYPTION_KEY = bytes.fromhex(os.getenv('ENCRYPTION_KEY', '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'))
+ENCRYPTION_KEY = bytes.fromhex(
+    os.getenv(
+        'ENCRYPTION_KEY',
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'))
 IV = bytes.fromhex(os.getenv('IV', '0123456789abcdef0123456789abcdef'))
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-
 
 
 def decrypt_data(encrypted_data):
